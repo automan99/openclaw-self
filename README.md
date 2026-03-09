@@ -570,7 +570,9 @@ FEISHU_OFFICIAL_PLUGIN_ENABLED=true
 
    如果此前创建过异常退出的旧容器，先执行：`docker compose --profile tools rm -sf openclaw-installer`
 
-   进入工具容器并切换用户：`docker exec -it openclaw-installer bash`
+   进入工具容器并切换用户：
+   `docker exec -it openclaw-installer bash`
+
    `su node`
 3. **在工具容器内执行安装向导**：
    运行 `feishu-plugin-onboard install`。
@@ -578,6 +580,10 @@ FEISHU_OFFICIAL_PLUGIN_ENABLED=true
    - 输入您的飞书应用 `AppID` 和 `AppSecret`。
 
    由于 [`openclaw-installer`](docker-compose.yml:82) 只是一次性工具容器，不承载 Gateway 主进程，因此这里发生服务重启不会把主网关容器安装流程打断。
+   
+   如有以下报错：Error: OpenClaw version mismatch. Expected >= 2026.2.26, found OpenClaw 2026.3.8 (3caab92). Please upgrade.
+   运行 `feishu-plugin-onboard update` 代替安装命令
+
 4. **完成配对**：
    - 在飞书给机器人发消息获取配对码。
    - 在主服务容器或工具容器中执行：`openclaw pairing approve feishu <配对码> --notify`
