@@ -985,27 +985,15 @@ def sync_feishu_channel(ctx, channel):
         channel['groups'] = feishu_groups
 
     default_account = ensure_path(channel, ['accounts', account_id])
+    # default_account.clear()
     default_account.update({
         'appId': env['FEISHU_APP_ID'],
         'appSecret': env['FEISHU_APP_SECRET'],
         'botName': env.get('FEISHU_BOT_NAME') or 'OpenClaw Bot',
         'dmPolicy': env.get('FEISHU_DM_POLICY') or ctx.default_dm_policy,
+        'allowFrom': parse_csv(env.get('FEISHU_ALLOW_FROM')) or ctx.default_allow_from,
         'groupPolicy': env.get('FEISHU_GROUP_POLICY') or ctx.default_group_policy,
-        'replyMode': env.get('FEISHU_REPLY_MODE') or 'auto',
-        'threadSession': parse_bool(env.get('FEISHU_THREAD_SESSION', 'true'), True),
-        'streaming': parse_bool(env.get('FEISHU_STREAMING', 'true'), True),
-        'requireMention': parse_bool(env.get('FEISHU_REQUIRE_MENTION', 'true'), True),
-        'footer': {
-            'elapsed': parse_bool(env.get('FEISHU_FOOTER_ELAPSED', 'true'), True),
-            'status': parse_bool(env.get('FEISHU_FOOTER_STATUS', 'true'), True),
-        },
     })
-    if env.get('FEISHU_ALLOW_FROM'):
-        default_account['allowFrom'] = parse_csv(env.get('FEISHU_ALLOW_FROM'))
-    if env.get('FEISHU_GROUP_ALLOW_FROM'):
-        default_account['groupAllowFrom'] = parse_csv(env.get('FEISHU_GROUP_ALLOW_FROM'))
-    if env.get('FEISHU_DOMAIN'):
-        default_account['domain'] = env['FEISHU_DOMAIN']
 
 
 def sync_dingtalk_channel(ctx, channel):
