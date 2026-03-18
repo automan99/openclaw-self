@@ -53,7 +53,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /root/.npm /root/.cache
 
 # 2. 插件安装（作为 node 用户以避免后期权限修复带来的镜像膨胀）
-RUN mkdir -p /home/node/.openclaw/workspace /home/node/.openclaw/extensions && \
+RUN mkdir -p /home/node/.openclaw/workspace /home/node/.openclaw/extensions /home/node/.openclaw/skills && \
     chown -R node:node /home/node
 
 USER node
@@ -84,8 +84,9 @@ RUN cd /home/node/.openclaw/extensions && \
   timeout 300 bash ./scripts/upgrade.sh || true && \
   timeout 300 openclaw plugins install . || true && \
   timeout 300 openclaw plugins install @sunnoy/wecom || true && \
+  timeout 300 openclaw plugins install @openclaw/mattermost || true && \
   mkdir -p /home/node/.openclaw && \
-  printf '{\n  "channels": {\n    "feishu": {\n      "enabled": false,\n      "appId": "2222222222222222",\n      "appSecret": "1111111111111111",\n      "accounts": {\n        "default": {\n          "appId": "2222222222222222",\n          "appSecret": "1111111111111111",\n          "botName": "OpenClaw Bot"\n        }\n      }\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
+  printf '{\n  "channels": {\n    "feishu": {\n      "enabled": false,\n      "appId": "2222222222222222",\n      "appSecret": "1111111111111111",\n      "accounts": {\n        "default": {\n          "appId": "2222222222222222",\n          "appSecret": "1111111111111111",\n          "botName": "OpenClaw Bot"\n        }\n      }\n    },\n    "mattermost": {\n      "enabled": true,\n      "url": "https://mattermost.example.com",\n      "botToken": "your-bot-token",\n      "teamName": "your-team",\n      "channelName": "your-channel"\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
   # 预执行安装命令（容器内需手动交互，此处仅作声明或环境准备）
   # npx -y @larksuite/openclaw-lark-tools install && \
   find /home/node/.openclaw/extensions -name ".git" -type d -exec rm -rf {} + && \

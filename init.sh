@@ -164,6 +164,16 @@ WECOM_ACCOUNT_FIELDS = {
 WECOM_RESERVED_FIELDS = {'enabled', 'defaultAccount', 'adminUsers', 'commands', 'dynamicAgents'}
 QQBOT_ACCOUNT_FIELDS = {'appId', 'clientSecret', 'enabled'}
 QQBOT_RESERVED_FIELDS = {'enabled', 'appId', 'clientSecret', 'dmPolicy', 'allowFrom', 'groupPolicy', 'accounts'}
+MATTERMOST_ACCOUNT_FIELDS = {
+    'name', 'botToken', 'baseUrl', 'dmPolicy', 'allowFrom', 'groupPolicy',
+    'groupAllowFrom', 'chatmode', 'oncharPrefixes', 'replyToMode', 'capabilities',
+    'actions', 'interactions'
+}
+MATTERMOST_RESERVED_FIELDS = {
+    'enabled', 'accounts', 'dmPolicy', 'allowFrom', 'groupPolicy',
+    'groupAllowFrom', 'chatmode', 'oncharPrefixes', 'replyToMode',
+    'capabilities', 'actions', 'interactions'
+}
 
 CHANNEL_INSTALLS = {
     'feishu': {'source': 'npm', 'spec': '@openclaw/feishu', 'installPath': '/home/node/.openclaw/extensions/feishu'},
@@ -171,6 +181,7 @@ CHANNEL_INSTALLS = {
     'qqbot': {'source': 'path', 'sourcePath': '/home/node/.openclaw/qqbot', 'installPath': '/home/node/.openclaw/extensions/qqbot'},
     'napcat': {'source': 'path', 'sourcePath': '/home/node/.openclaw/extensions/napcat', 'installPath': '/home/node/.openclaw/extensions/napcat'},
     'wecom': {'source': 'npm', 'spec': '@sunnoy/wecom', 'installPath': '/home/node/.openclaw/extensions/wecom'},
+    'mattermost': {'source': 'npm', 'spec': '@openclaw/mattermost', 'installPath': '/home/node/.openclaw/extensions/mattermost'},
 }
 
 
@@ -357,6 +368,10 @@ def is_qqbot_account_config(value):
     return isinstance(value, dict) and any(key in value for key in QQBOT_ACCOUNT_FIELDS)
 
 
+def is_mattermost_account_config(value):
+    return isinstance(value, dict) and any(key in value for key in MATTERMOST_ACCOUNT_FIELDS)
+
+
 def get_feishu_accounts(feishu):
     if not isinstance(feishu, dict):
         return []
@@ -404,6 +419,19 @@ def get_qqbot_accounts(qqbot):
     result = []
     for account_id, cfg in accounts.items():
         if is_valid_account_id(account_id) and is_qqbot_account_config(cfg):
+            result.append((account_id, cfg))
+    return result
+
+
+def get_mattermost_accounts(mattermost):
+    if not isinstance(mattermost, dict):
+        return []
+    accounts = mattermost.get('accounts')
+    if not isinstance(accounts, dict):
+        return []
+    result = []
+    for account_id, cfg in accounts.items():
+        if is_valid_account_id(account_id) and is_mattermost_account_config(cfg):
             result.append((account_id, cfg))
     return result
 
@@ -1026,6 +1054,8 @@ class SyncContext:
         self.has_qqbot_single_env = bool((env.get('QQBOT_APP_ID') or '').strip() and (env.get('QQBOT_CLIENT_SECRET') or '').strip())
         self.has_qqbot_bots_env = bool((env.get('QQBOT_BOTS_JSON') or '').strip())
         self.has_qqbot_any_env = self.has_qqbot_single_env or self.has_qqbot_bots_env
+        self.has_mattermost_single_env = bool((env.get('MATTERMOST_BOT_TOKEN') or '').strip() and (env.get('MATTERMOST_URL') or '').strip())
+        self.has_mattermost_any_env = self.has_mattermost_single_env
         self.feishu_plugin_env = (env.get('FEISHU_OFFICIAL_PLUGIN_ENABLED') or '').strip().lower()
         self.feishu_plugin_enabled = self.feishu_plugin_env in ('1', 'true', 'yes', 'on')
         self.feishu_plugin_explicit = self.feishu_plugin_env in ('0', '1', 'false', 'true', 'no', 'yes', 'off', 'on')
@@ -1347,6 +1377,74 @@ def sync_napcat_channel(ctx, channel):
         channel['admins'] = [int(item) for item in parse_csv(env.get('NAPCAT_ADMINS'))]
 
 
+def sync_mattermost_channel(ctx, channel):
+    env = ctx.env
+    channel.update({
+        'enabled': True,
+        'dmPolicy': env.get('MATTERMOST_DM_POLICY') or 'pairing',
+        'allowFrom': parse_csv(env.get('MATTERMOST_ALLOW_FROM')) or ctx.default_allow_from,
+        'groupPolicy': env.get('MATTERMOST_GROUP_POLICY') or 'allowlist',
+    })
+
+    # 群组允许来源
+    if env.get('MATTERMOST_GROUP_ALLOW_FROM'):
+        channel['groupAllowFrom'] = parse_csv(env.get('MATTERMOST_GROUP_ALLOW_FROM'))
+
+    # 聊天模式
+    chatmode = env.get('MATTERMOST_CHATMODE') or 'oncall'
+    channel['chatmode'] = chatmode
+
+    # 触发前缀（仅 onchar 模式）
+    if chatmode == 'onchar' and env.get('MATTERMOST_ONCHAR_PREFIXES'):
+        channel['oncharPrefixes'] = parse_csv(env.get('MATTERMOST_ONCHAR_PREFIXES'))
+
+    # 线程回复模式
+    reply_mode = env.get('MATTERMOST_REPLY_TO_MODE')
+    if reply_mode:
+        channel['replyToMode'] = reply_mode
+
+    # 交互按钮支持
+    inline_buttons = parse_bool(env.get('MATTERMOST_INLINE_BUTTONS'), False)
+    if inline_buttons:
+        capabilities = channel.get('capabilities', [])
+        if 'inlineButtons' not in capabilities:
+            capabilities.append('inlineButtons')
+        channel['capabilities'] = capabilities
+
+    # 按钮回调 URL（仅当有值时才创建 interactions 对象）
+    callback_url = env.get('MATTERMOST_CALLBACK_BASE_URL')
+    if callback_url:
+        interactions = ensure_path(channel, ['interactions'])
+        interactions['callbackBaseUrl'] = callback_url
+
+    # 消息反应
+    reactions_enabled = env.get('MATTERMOST_REACTIONS_ENABLED')
+    if reactions_enabled is not None:
+        actions = ensure_path(channel, ['actions'])
+        actions['reactions'] = parse_bool(reactions_enabled, True)
+
+    # @username 匹配（危险选项，用户名可变）
+    allow_name_matching = env.get('MATTERMOST_ALLOW_NAME_MATCHING')
+    if allow_name_matching is not None:
+        channel['dangerouslyAllowNameMatching'] = parse_bool(allow_name_matching, False)
+
+    # 配置写入权限
+    config_writes = env.get('MATTERMOST_CONFIG_WRITES')
+    if config_writes is not None:
+        channel['configWrites'] = parse_bool(config_writes, True)
+
+    # 默认账号配置
+    account = ensure_path(channel, ['accounts', 'default'])
+    account.update({
+        'name': 'Primary',
+        'botToken': env['MATTERMOST_BOT_TOKEN'],
+        'baseUrl': env['MATTERMOST_URL'],
+        'dmPolicy': env.get('MATTERMOST_DM_POLICY') or 'pairing',
+        'allowFrom': parse_csv(env.get('MATTERMOST_ALLOW_FROM')) or ctx.default_allow_from,
+        'groupPolicy': env.get('MATTERMOST_GROUP_POLICY') or 'allowlist',
+    })
+
+
 def sync_wecom_channel(ctx, channel):
     env = ctx.env
     channel['enabled'] = True
@@ -1428,6 +1526,7 @@ def apply_channel_rules(ctx):
         'qqbot': 'QQ 机器人',
         'napcat': 'NapCat',
         'wecom': '企业微信',
+        'mattermost': 'Mattermost',
     }
 
     rules = [
@@ -1473,6 +1572,12 @@ def apply_channel_rules(ctx):
             'sync': lambda channel: sync_wecom_channel(ctx, channel),
             'install': True,
         },
+        {
+            'channel': 'mattermost',
+            'required_envs': ['MATTERMOST_BOT_TOKEN', 'MATTERMOST_URL'],
+            'sync': lambda channel: sync_mattermost_channel(ctx, channel),
+            'install': True,
+        },
     ]
 
     for rule in rules:
@@ -1499,6 +1604,10 @@ def apply_channel_rules(ctx):
             continue
 
         if channel_id == 'qqbot' and not ctx.has_qqbot_any_env:
+            ctx.disable_channel(channel_id)
+            continue
+
+        if channel_id == 'mattermost' and not ctx.has_mattermost_any_env:
             ctx.disable_channel(channel_id)
             continue
 
@@ -1569,6 +1678,15 @@ def apply_multi_account_plugin_state(ctx):
     elif not ctx.has_qqbot_any_env:
         ctx.disable_channel('qqbot')
         print('ℹ️ QQ 机器人未提供任何环境变量，保持插件禁用')
+
+    # Mattermost 不支持多账号，仅处理单账号逻辑
+    mattermost_accounts = get_mattermost_accounts(ctx.channels.get('mattermost'))
+    if ctx.has_mattermost_single_env:
+        ctx.enable_channel('mattermost', install=True)
+        print('✅ 已根据 Mattermost 环境变量启用插件')
+    elif not ctx.has_mattermost_any_env and not mattermost_accounts:
+        ctx.disable_channel('mattermost')
+        print('ℹ️ Mattermost 未提供任何环境变量，保持插件禁用')
 
 
 def apply_feishu_plugin_switch(ctx):

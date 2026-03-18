@@ -1,6 +1,6 @@
 # OpenClaw-Docker-CN-IM
 
-> 面向中国 IM 场景的 OpenClaw Docker 整合镜像，预装飞书、钉钉、QQ 机器人、企业微信等常用插件，适合快速搭建统一的 AI 机器人网关。
+> 面向中国 IM 场景的 OpenClaw Docker 整合镜像，预装飞书、钉钉、QQ 机器人、企业微信、Mattermost 等常用插件，适合快速搭建统一的 AI 机器人网关。
 
 > 🚀 **推荐搭配**：OpenClaw 功能强大但 Token 消耗较大，推荐配合 [AIClient-2-API](https://github.com/justlovemaki/AIClient-2-API) 项目使用，将各大 AI 客户端转换为 API 接口，实现无限 Token 调用，彻底解决 Token 焦虑！本项目已支持 OpenAI 和 Claude 两种协议，可直接对接 AIClient-2-API 服务。
 
@@ -29,7 +29,7 @@
 
 本项目提供开箱即用的 OpenClaw 体验，并针对国内 IM 场景进行了深度增强：
 
-- **全平台支持**：预装飞书（官方/旧版）、钉钉、QQ 机器人、企业微信插件，支持多账号与多 Agent 路由，组建AI团队。
+- **全平台支持**：预装飞书（官方/旧版）、钉钉、QQ 机器人、企业微信、Mattermost 插件，支持多账号与多 Agent 路由，组建AI团队。
 - **配置驱动**：支持通过环境变量自动生成配置，提供 [`.env.example`](.env.example) 快速上手。
 - **工具集增强**：集成 OpenCode AI、Playwright、FFmpeg、中文 TTS 等 AI 常用工具。
 - **生产友好**：支持数据持久化挂载，提供独立工具容器用于飞书插件安装等一次性操作。
@@ -53,6 +53,7 @@
 - ✅ **钉钉**：[soimy/dingtalk](https://github.com/soimy/openclaw-channel-dingtalk)
 - ✅ **QQ 机器人**：[sliverp/qqbot](https://github.com/sliverp/qqbot)
 - ✅ **企业微信**：[sunnoy/wecom](https://github.com/sunnoy/openclaw-plugin-wecom)
+- ✅ **Mattermost**：[官方插件](https://docs.openclaw.ai/channels/mattermost) | `@openclaw/mattermost`
 
 ## 📦 快速部署
 
