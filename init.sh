@@ -1769,6 +1769,16 @@ def sync_gateway(ctx):
     auth = ensure_path(gateway, ['auth'])
     auth['token'] = ctx.env['OPENCLAW_GATEWAY_TOKEN']
     auth['mode'] = ctx.env.get('OPENCLAW_GATEWAY_AUTH_MODE') or 'token'
+
+    # HTTP Chat Completions 端点配置
+    if ctx.env.get('OPENCLAW_GATEWAY_HTTP_CHAT_COMPLETIONS_ENABLED'):
+        http = ensure_path(gateway, ['http'])
+        endpoints = ensure_path(http, ['endpoints'])
+        chat_completions = ensure_path(endpoints, ['chatCompletions'])
+        chat_completions['enabled'] = parse_bool(
+            ctx.env.get('OPENCLAW_GATEWAY_HTTP_CHAT_COMPLETIONS_ENABLED', 'true'), True
+        )
+
     print('✅ Gateway 同步完成')
 
 
