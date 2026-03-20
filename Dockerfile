@@ -86,8 +86,7 @@ RUN cd /home/node/.openclaw/extensions && \
   timeout 300 openclaw plugins install @sunnoy/wecom || true && \
   timeout 300 openclaw plugins install @openclaw/mattermost || true && \
   mkdir -p /home/node/.openclaw && \
-  #printf '{\n  "channels": {\n    "feishu": {\n      "enabled": false,\n      "appId": "2222222222222222",\n      "appSecret": "1111111111111111",\n      "accounts": {\n        "default": {\n          "appId": "2222222222222222",\n          "appSecret": "1111111111111111",\n          "botName": "OpenClaw Bot"\n        }\n      }\n    },\n    "mattermost": {\n      "enabled": true,\n      "url": "https://mattermost.example.com",\n      "botToken": "your-bot-token",\n      "teamName": "your-team",\n      "channelName": "your-channel"\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
-  printf '' > /home/node/.openclaw/openclaw.json && \
+  printf '{\n  "gateway": {\n    "mode": "local",\n    "bind": "lan",\n    "controlUi": {\n      "allowedOrigins": [\n        "http://localhost:18789",\n        "http://127.0.0.1:18789"\n      ]\n    },\n    "auth": {\n      "mode": "token",\n      "token": "123456"\n    },\n    "http": {\n      "endpoints": {\n        "chatCompletions": {\n          "enabled": true\n        }\n      }\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
   # 预执行安装命令（容器内需手动交互，此处仅作声明或环境准备）
   # npx -y @larksuite/openclaw-lark-tools install && \
   find /home/node/.openclaw/extensions -name ".git" -type d -exec rm -rf {} + && \

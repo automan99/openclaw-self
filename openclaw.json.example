@@ -291,6 +291,21 @@
           "ops": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"
         }
       }
+    },
+    "mattermost": {
+      "enabled": true,
+      "url": "https://mattermost.example.com",
+      "botToken": "your-bot-token",
+      "dmPolicy": "pairing",
+      "allowFrom": ["*"],
+      "groupPolicy": "allowlist",
+      "groupAllowFrom": ["user-id-1", "user-id-2"],
+      "chatMode": "oncall",
+      "replyToMode": "off",
+      "inlineButtons": false,
+      "reactionsEnabled": true,
+      "allowNameMatching": false,
+      "configWrites": true
     }
   },
   "gateway": {
