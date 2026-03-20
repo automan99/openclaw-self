@@ -1958,10 +1958,11 @@ start_gateway() {
     gosu node env HOME=/home/node DBUS_SESSION_BUS_ADDRESS=/dev/null \
         BUN_INSTALL="/usr/local" PATH="/usr/local/bin:$PATH" \
         openclaw gateway run \
-        --bind "$OPENCLAW_GATEWAY_BIND" \
-        --port "$OPENCLAW_GATEWAY_PORT" \
-        --token "$OPENCLAW_GATEWAY_TOKEN" \
         --verbose &
+        # --bind "$OPENCLAW_GATEWAY_BIND" \
+        # --port "$OPENCLAW_GATEWAY_PORT" \
+        # --token "$OPENCLAW_GATEWAY_TOKEN" \
+        
     GATEWAY_PID=$!
 
     echo "=== OpenClaw Gateway 已启动 (PID: $GATEWAY_PID) ==="
