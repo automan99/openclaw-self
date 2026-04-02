@@ -1,6 +1,9 @@
 # OpenClaw Docker 镜像
 FROM node:22-slim
 
+# 从 Python 官方镜像拷贝 Python 3.12 (确保使用与 node 镜像一致的 Debian Bookworm 版本)
+COPY --from=python:3.12-slim-bookworm /usr/local /usr/local
+
 # 设置工作目录
 WORKDIR /app
 
@@ -16,6 +19,7 @@ RUN apt-get update && \
     ca-certificates \
     chromium \
     curl \
+    docker.io \
     build-essential \
     ffmpeg \
     fonts-liberation \
@@ -27,23 +31,24 @@ RUN apt-get update && \
     locales \
     openssh-client \
     procps \
-    python3 \
     socat \
     tini \
-    unzip \
-    websockify && \
+    unzip && \
     sed -i 's/^# *en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen && \
     # update-locale 在部分 slim 基础镜像中会返回 invalid locale settings，这里改为直接写入默认 locale 配置
     printf 'LANG=en_US.UTF-8\nLANGUAGE=en_US:en\nLC_ALL=en_US.UTF-8\n' > /etc/default/locale && \
     # 配置 git 使用 HTTPS 替代 SSH
     git config --system url."https://github.com/".insteadOf ssh://git@github.com/ && \
-    # 更新 npm 并安装全局包
-    npm install -g npm@latest && \
-    npm install -g openclaw@2026.3.12 opencode-ai@latest playwright playwright-extra puppeteer-extra-plugin-stealth @steipete/bird && \
+    # 设置 npm 镜像并安装全局包
+    npm config set registry https://registry.npmmirror.com && \
+    npm install -g openclaw@2026.4.1 opencode-ai@latest clawhub playwright playwright-extra puppeteer-extra-plugin-stealth @steipete/bird && \
     # 安装 bun、uv 和 qmd
     curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash && \
     curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh && \
+    # 建立 python3 -> python 链接并安装 websockify
+    ln -sf /usr/local/bin/python3 /usr/local/bin/python && \
+    /usr/local/bin/python3 -m pip install --no-cache-dir websockify && \
     npm install -g @tobilu/qmd@1.1.6 && \
     # 安装 Playwright 浏览器依赖
     npx playwright install chromium --with-deps && \
@@ -69,28 +74,22 @@ RUN mkdir -p /home/node/.linuxbrew/Homebrew && \
     chmod -R g+rwX /home/node/.linuxbrew
 
 RUN cd /home/node/.openclaw/extensions && \
-  git clone --depth 1 https://github.com/soimy/openclaw-channel-dingtalk.git dingtalk && \
-  cd dingtalk && \
-  npm install --omit=dev --legacy-peer-deps && \
-  timeout 300 openclaw plugins install -l . || true && \
-  cd /home/node/.openclaw/extensions && \
   git clone --depth 1 -b v4.17.25 https://github.com/Daiyimo/openclaw-napcat.git napcat && \
   cd napcat && \
   npm install --production && \
   timeout 300 openclaw plugins install -l . || true && \
-  cd /home/node/.openclaw && \
-  git clone https://github.com/sliverp/qqbot.git && \
-  cd qqbot && \
-  timeout 300 bash ./scripts/upgrade.sh || true && \
-  timeout 300 openclaw plugins install . || true && \
+  cd /home/node/.openclaw/extensions && \
+  timeout 300 openclaw plugins install @soimy/dingtalk || true && \
+  timeout 300 openclaw plugins install @tencent-connect/openclaw-qqbot@latest || true && \
   timeout 300 openclaw plugins install @sunnoy/wecom || true && \
   timeout 300 openclaw plugins install @openclaw/mattermost || true && \
-  mkdir -p /home/node/.openclaw && \
-  printf '{\n  "gateway": {\n    "mode": "local",\n    "bind": "lan",\n    "controlUi": {\n      "allowedOrigins": [\n        "http://localhost:18789",\n        "http://127.0.0.1:18789"\n      ]\n    },\n    "auth": {\n      "mode": "token",\n      "token": "123456"\n    },\n    "http": {\n      "endpoints": {\n        "chatCompletions": {\n          "enabled": true\n        }\n      }\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
+  mkdir -p /home/node/.openclaw /home/node/.openclaw-seed && \
   # 预执行安装命令（容器内需手动交互，此处仅作声明或环境准备）
+  #  printf '{\n  "channels": {\n    "feishu": {\n      "enabled": false,\n      "appId": "2222222222222222",\n      "appSecret": "1111111111111111",\n      "accounts": {\n        "default": {\n          "appId": "2222222222222222",\n          "appSecret": "1111111111111111",\n          "name": "OpenClaw Bot"\n        }\n      }\n    }\n  }\n}\n' > /home/node/.openclaw/openclaw.json && \
   # npx -y @larksuite/openclaw-lark-tools install && \
   find /home/node/.openclaw/extensions -name ".git" -type d -exec rm -rf {} + && \
-  rm -rf /home/node/.openclaw/qqbot/.git && \
+  mv /home/node/.openclaw/extensions /home/node/.openclaw-seed/ && \
+  printf '%s\n' '2026.4.1' > /home/node/.openclaw-seed/extensions/.seed-version && \
   rm -rf /tmp/* /home/node/.npm /home/node/.cache
   
 # 3. 最终配置
